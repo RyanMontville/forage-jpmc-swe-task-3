@@ -18,7 +18,7 @@
 #  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 #  DEALINGS IN THE SOFTWARE.
 
-#from itertools import izip
+# from itertools import izip
 from random    import normalvariate, random
 from datetime  import timedelta, datetime
 
@@ -31,7 +31,7 @@ import json
 import re
 import threading
 
-#from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+# from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 import http.server
 from socketserver   import ThreadingMixIn
 
@@ -59,12 +59,14 @@ OVERLAP = 4
 #
 # Test Data
 
+
 def bwalk(min, max, std):
     """ Generates a bounded random walk. """
     rng = max - min
     while True:
         max += normalvariate(0, std)
         yield abs((max % (rng * 2)) - rng) + min
+
 
 def market(t0 = MARKET_OPEN):
     """ Generates a random series of market conditions,
@@ -73,6 +75,7 @@ def market(t0 = MARKET_OPEN):
     for hours, px, spd in zip(bwalk(*FREQ), bwalk(*PX), bwalk(*SPD)):
         yield t0, px, spd
         t0 += timedelta(hours = abs(hours))
+
 
 def orders(hist):
     """ Generates a random set of limit orders (time, side, price, size) from
@@ -97,6 +100,7 @@ def add_book(book, order, size, _age = 10):
         if age > 0:
             yield o, s, age - 1
 
+
 def clear_order(order, size, book, op = operator.ge, _notional = 0):
     """ Try to clear a sized order against a book, returning a tuple of
         (notional, new_book) if successful, and None if not.  _notional is a
@@ -111,6 +115,7 @@ def clear_order(order, size, book, op = operator.ge, _notional = 0):
         elif len(tail) > 0:
             return clear_order(order, -sdiff, tail, op, _notional)
 
+
 def clear_book(buy = None, sell = None):
     """ Clears all crossed orders from a buy and sell book, returning the new
         books uncrossed.
@@ -124,6 +129,7 @@ def clear_book(buy = None, sell = None):
         else:
             break
     return buy, sell
+
 
 def order_book(orders, book, stock_name):
     """ Generates a series of order books from a series of orders.  Order books
@@ -141,6 +147,7 @@ def order_book(orders, book, stock_name):
 #
 # Test Data Persistence
 
+
 def generate_csv():
     """ Generate a CSV of order history. """
     with open('test.csv', 'wb') as f:
@@ -149,6 +156,7 @@ def generate_csv():
             if t > MARKET_OPEN + SIM_LENGTH:
                 break
             writer.writerow([t, stock, side, order, size])
+
 
 def read_csv():
     """ Read a CSV or order history into a list. """
@@ -160,15 +168,18 @@ def read_csv():
 #
 # Server
 
+
 class ThreadedHTTPServer(ThreadingMixIn, http.server.HTTPServer):
     """ Boilerplate class for a multithreaded HTTP Server, with working
         shutdown.
     """
     allow_reuse_address = True
+
     def shutdown(self):
         """ Override MRO to shutdown properly. """
         self.socket.close()
         http.server.HTTPServer.shutdown(self)
+
 
 def route(path):
     """ Decorator for a simple bottle-like web framework.  Routes path to the
@@ -179,6 +190,7 @@ def route(path):
         return f
     return _route
 
+
 def read_params(path):
     """ Read query parameters into a dictionary if they are parseable,
         otherwise returns None.
@@ -187,6 +199,7 @@ def read_params(path):
     if len(query) > 1:
         query = query[1].split('&')
         return dict(map(lambda x: x.split('='), query))
+
 
 def get(req_handler, routes):
     """ Map a request to the appropriate route of a routes instance. """
@@ -202,6 +215,7 @@ def get(req_handler, routes):
                 req_handler.wfile.write(bytes(data,  encoding = 'utf-8'))
                 return
 
+
 def run(routes, host = '0.0.0.0', port = 8080):
     """ Runs a class as a server whose methods have been decorated with
         @route.
@@ -209,6 +223,7 @@ def run(routes, host = '0.0.0.0', port = 8080):
     class RequestHandler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *args, **kwargs):
             pass
+
         def do_GET(self):
             get(self, routes)
     server = ThreadedHTTPServer((host, port), RequestHandler)
@@ -227,10 +242,12 @@ def run(routes, host = '0.0.0.0', port = 8080):
 #
 # App
 
+
 ops = {
     'buy':  operator.le,
     'sell': operator.ge,
 }
+
 
 class App(object):
     """ The trading game server application. """
@@ -312,6 +329,7 @@ class App(object):
 ################################################################################
 #
 # Main
+
 
 if __name__ == '__main__':
     if not os.path.isfile('test.csv'):
